@@ -31,33 +31,42 @@ def index():
 
 
 
-                            # fake user agent to avoid getting blocked by Google
+                            # fake user agent to avoid getting blocked
                     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"}
 
-                            # fetch the search results page
-                    response = requests.get(f"https://www.google.com/search?q={query}&sxsrf=AJOqlzUuff1RXi2mm8I_OqOwT9VjfIDL7w:1676996143273&source=lnms&tbm=isch&sa=X&ved=2ahUKEwiq-qK7gaf9AhXUgVYBHYReAfYQ_AUoA3oECAEQBQ&biw=1920&bih=937&dpr=1#imgrc=1th7VhSesfMJ4M")
+                    # fetch the search results page from Bing Images (Google now blocks non-JS clients)
+                    response = requests.get(f"https://www.bing.com/images/search?q={query}", headers=headers)
 
-
-                            # parse the HTML using BeautifulSoup
+                    # parse the HTML using BeautifulSoup
                     soup = BeautifulSoup(response.content, "html.parser")
 
-                            # find all img tags
+                    # find all img tags
                     image_tags = soup.find_all("img")
 
-                            # download each image and save it to the specified directory
-                    del image_tags[0]
-                    img_data=[]
-                    for index,image_tag in enumerate(image_tags):
-                                # get the image source URL
-                                image_url = image_tag['src']
-                                #print(image_url)
-                                
-                                # send a request to the image URL and save the image
-                                image_data = requests.get(image_url).content
-                                mydict={"Index":index,"Image":image_data}
-                                img_data.append(mydict)
-                                with open(os.path.join(save_directory, f"{query}_{image_tags.index(image_tag)}.jpg"), "wb") as f:
-                                    f.write(image_data)   
+                    # download each image and save it to the specified directory
+                    img_data = []
+                    valid_count = 0
+                    for index, image_tag in enumerate(image_tags):
+                        image_url = image_tag.get('src') or image_tag.get('data-src')
+                        
+                        # Filter out empty URLs, SVGs, or internal tracking pixels
+                        if not image_url or not image_url.startswith("http") or image_url.endswith(".svg") or "r.bing.com" in image_url:
+                            continue
+                            
+                        try:
+                            # send a request to the image URL and save the image
+                            image_data = requests.get(image_url, timeout=5).content
+                            mydict = {"Index": valid_count, "Image": image_data}
+                            img_data.append(mydict)
+                            
+                            with open(os.path.join(save_directory, f"{query}_{valid_count}.jpg"), "wb") as f:
+                                f.write(image_data)   
+                            
+                            valid_count += 1
+                            if valid_count >= 20: # limit to top 20 images
+                                break
+                        except Exception as img_err:
+                            logging.info(f"Skipped downloading image: {img_err}")
                     # Retrieve the MongoDB URI from environment variables or fallback to default
                     mongo_uri = os.environ.get("MONGO_URI", "mongodb+srv://<username>:<password>@cluster.mongodb.net/?retryWrites=true&w=majority")
                     
