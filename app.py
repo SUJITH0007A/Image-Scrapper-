@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request,jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS,cross_origin
 import requests
 from bs4 import BeautifulSoup
@@ -82,7 +82,8 @@ def index():
                     else:
                         logging.warning("MongoDB URI not configured or contains default '<password>' placeholder. Skipping database insertion.")
 
-                    return "Images downloaded successfully, check your folder"
+                    image_files = [f"{query}_{i}.jpg" for i in range(valid_count)]
+                    return render_template("result.html", query=query, images=image_files)
                 except Exception as e:
                     logging.info(e)
                     return 'Something is wrong, please try again!'
@@ -90,6 +91,9 @@ def index():
     else:
         return render_template('index.html')
 
+@app.route('/images/<path:filename>')
+def serve_image(filename):
+    return send_from_directory('images', filename)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=8000, debug=True)
