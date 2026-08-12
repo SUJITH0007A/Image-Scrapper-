@@ -52,6 +52,4 @@ Contributions are what makes the open-source community such an amazing place to 
  - Push to the Branch
  - Open a Pull Request
 
-# License
 
-Distributed under the GNU General Public License v3.0. See LICENSE for more information.
